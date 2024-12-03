@@ -1,0 +1,14 @@
+{
+  "dependencies": {
+    "fs": "^0.0.1-security"
+  },
+  "name": "advent-of-code",
+  "version": "1.0.0",
+  "description": "Advent of Code 2024",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Henrik Suurik",
+  "license": "ISC"
+}
