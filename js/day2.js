@@ -27,27 +27,10 @@ function parseDay2Data(data) {
 
     myDataArrArr.forEach((item) => removeSingleFaultIfPossible(item));
 
-    const myDiffArrArr = myDataArrArr.map((item) => createDiffArr(item));
+    const mySafeArrArr = myDataArrArr.filter((item) => isSafe(item));
 
-    const myDiffArrArrSafe = myDiffArrArr.filter((item) => isDiffSafe(item));
-
-    console.log("Number of safe 'levels'", myDiffArrArrSafe.length); // Correct Answer: 402
+    console.log("Number of safe 'levels'", mySafeArrArr.length); // Correct Answer: 402
     console.log("Number of removed single faults", removedSingleFaults);
-}
-
-function createDiffArr(arr) {
-    let diffArr = [];
-    for(let i = 1; i < arr.length; i++) {
-        diffArr.push(arr[i] - arr[i - 1]);
-    }
-    return diffArr;
-}
-
-function isDiffSafe(diffArr) {
-    const posSign = diffArr.every((diff) => diff > 0);
-    const negSign = diffArr.every((diff) => diff < 0);
-    const safeDiff = diffArr.every((diff) => Math.abs(diff) >= 1 && Math.abs(diff) <= 3);
-    return (posSign || negSign) && safeDiff;
 }
 
 function removeSingleFaultIfPossible(dataArr) {
