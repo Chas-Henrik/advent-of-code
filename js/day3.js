@@ -41,7 +41,7 @@ function parseDay3Data(data) {
         return acc;
     },0);
 
-    console.log(total); // Correct Answer: 157621318 
+    console.log(total); // Correct Answer: 79845780 
 }
 
 function mul(a, b) {
@@ -49,4 +49,3 @@ function mul(a, b) {
 }
 
 readFileData('./data/list3.txt');
-
