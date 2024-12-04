@@ -41,7 +41,7 @@ function parseDay3Data(data) {
         return acc;
     },0);
 
-    console.log(total); // Correct Answer: 79845780 
+    console.log(total); // Correct Answer: 79845780 & 157621318 
 }
 
 function mul(a, b) {
