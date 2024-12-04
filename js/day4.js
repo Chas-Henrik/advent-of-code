@@ -1,23 +1,12 @@
 
 // Include fs module
 const fs = require('fs');
-let removedSingleFaults = 0;
 
-function readFileData(url) {
-    console.log(url);
-    let fileData;
-    fs.readFile(url, 'utf8', (err, data) => {
-        if (err) {
-            console.error(err);
-            return;
-        }
-        parseDay4Data(data);
-    });
+let data = fs.readFileSync('./data/list4.txt', 'utf8');
 
-    return fileData;
-}
+parseDay4Data();
 
-function parseDay4Data(data) {
+function parseDay4Data() {
     linesArr = data.split('\r\n');
     charLinesArr = linesArr.map((line) => line.split(''));
     let xmasMatches = 0;
@@ -95,6 +84,4 @@ function matchX_MAS(data, y, x, yMax, xMax) {
     }
     return matches;
 }
-
-readFileData('./data/list4.txt');
 
