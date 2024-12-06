@@ -2,109 +2,172 @@
 // Include fs module
 const fs = require('fs');
 
-let data = fs.readFileSync('./data/list5.txt', 'utf8');
-const FIND_CORRECT_PAGES = false;
-let globalSwapCnt = 0;
+const directions = ['N', 'E', 'S', 'W'];
+let currentDirection = 'N';
+let visitedPositions = 0;
+let loopDetected = false;
+let loopDetectionStatus = {
+    active : false,
+    turns : []
+};
 
-parseDay5Data();
+parseDay6Data();
 
-function parseDay5Data() {
-    let rulesObj = {};
+function parseDay6Data() {
+    mapArrArr = readMapFile('./data/list6.txt')
+    const startPos = findStartPos(mapArrArr);
+    const startDirection = 'N';
+    patrol(mapArrArr, startPos, startDirection);
+    const fd = fs.openSync('./data/mapfile.txt', 'w');
+    fs.writeFileSync(fd, mapArrArr.map((line) => line.join('')).join('\r\n'));
+    console.log("visitedPositions", visitedPositions); // Correct answer: 5444
+
+    const loopCnt = runLoopDetection(startPos, startDirection);
+    console.log("loopCnt", loopCnt); // Correct answer: 1722 is too low, 4680 is too high, 2064 is not correct
+}
+
+function readMapFile(fileName) {
+    let data = fs.readFileSync(fileName, 'utf8');
     const linesArr = data.split('\r\n');
-    const rulesArr = linesArr.filter(line => line.includes('|'));
-    const rulesArrArr = rulesArr.map(rule => rule.split('|').map(num => parseInt(num)));
-    rulesArrArr.forEach(element => {
-        (rulesObj[element[0]]===undefined) ? rulesObj[element[0]] = [element[1]] : rulesObj[element[0]].push(element[1]);
-    });
-    const pagesArr = linesArr.filter(line => !line.includes('|') && line !== '');
-    const pagesArrArr = pagesArr.map(line => line.split(',').map(num => parseInt(num)));
-
-    if(FIND_CORRECT_PAGES) {
-        const correctPagesArrArr = pagesArrArr.filter((update) => isCorrectlyOrderedUpdate(update, rulesObj));
-        const sum = correctPagesArrArr.reduce((acc, update) => acc + getMiddle(update), 0);
-        console.log("sum", sum); // Correct answer: 6034
-        return;
-    } else {
-        const incorrectPagesArrArr = pagesArrArr.filter((update) => !isCorrectlyOrderedUpdate(update, rulesObj));
-        const correctPagesArrArr = incorrectPagesArrArr.map((update) => fixIncorrectOrder2(update, rulesObj));
-        // console.log("correctPagesArrArr", correctPagesArrArr);
-        const isCorrect = correctPagesArrArr.every((update) => isCorrectlyOrderedUpdate(update, rulesObj));
-        console.log("isCorrect", isCorrect);
-        const sum = correctPagesArrArr.reduce((acc, update) => acc + getMiddle(update), 0);
-        console.log("correctPagesArrArr.length", correctPagesArrArr.length);
-        console.log("globalSwapCnt", globalSwapCnt);
-        console.log("sum", sum); // Correct answer: 6305
-    }
+    return linesArr.map(line => line.split(''));
 }
 
-function fixIncorrectOrder2(update, rules) {
-    let swapCnt = 0;
+function runLoopDetection(startPos, startDirection) {
+    let detectedLoops = 0;
+    for (let y = 0; y < mapArrArr.length; y++) {
+        for (let x = 0; x < mapArrArr[y].length; x++) {
+            const mapArrArr = readMapFile('./data/mapfile.txt');
+            mapArrArr[startPos.y][startPos.x] = '^';
+            if (mapArrArr[y][x] == 'X') {
+                mapArrArr[y][x] = 'O';
+                delete loopDetectionStatus.turns;
+                loopDetectionStatus = {
+                    active : true,
+                    turns : []
+                };
+                console.log(`mapArrArr[${y}][${x}] = O`);
+                if(patrol(mapArrArr, startPos, startDirection)){
+                    detectedLoops++;
+                    console.log("detectedLoops", detectedLoops);
+                }
+            }
+        }
+    }
+    return detectedLoops;
+}
+
+function findStartPos(mapArrArr) {
+    let startPos = [];
+    for (let y = 0; y < mapArrArr.length; y++) {
+        for (let x = 0; x < mapArrArr[y].length; x++) {
+            if (mapArrArr[y][x] === '^') {
+                startPos = {y, x};
+            }
+        }
+    }
+    return startPos;
+}
+
+function patrol(mapArrArr, startPos, direction) {
+    let pos = {...startPos};
+
     do {
-        swapCnt = 0;
-        for(let i=update.length-2; i>=0; i--) {
-            const rulesArr = rules[update[i+1]];
-            if(rulesArr.includes(update[i])) {
-                swapElement(update, i, i+1)
-                swapCnt++;
-                globalSwapCnt++;
-            }
-        }
-    } while(swapCnt > 0);
+        let obstacle = false;
+        let newPos = null;
 
-    return update;
+        // Mark current position as visited
+        markVisited(mapArrArr, pos);
+
+        // Change direction if there is an obstacle
+        do {
+            // Get the new position (or null if outside map)
+            newPos = getNewPos(mapArrArr, pos, direction);
+
+            // Bail out if outside map
+            if(newPos == null)
+                return false;
+
+            // Check if new position is an obstacle
+            obstacle = isObstacle(mapArrArr, newPos);
+
+            // Try another direction if there is an obstacle
+            if(obstacle) {
+                // Bail out if loop is detected
+                if(isLoopDetected(pos, direction)) {
+                    return true;
+                }
+                
+                direction = directions[(directions.indexOf(direction) + 1) % directions.length];
+            }
+
+        } while(obstacle);
+
+        // Goto new position
+        pos = {...newPos};
+
+    } while (true);
 }
 
-function fixIncorrectOrder(update, rules) {
-    for(let i = 0; i < update.length - 1; i++) {
-        const rulesArr = rules[update[i]];
-        //Check that all rule elements are after the current element in the array
-        for(let ruleElement of rulesArr) {
-            const idx = update.findIndex((val) => val === ruleElement);
-            if(idx >= 0 && idx < i) {
-                moveElement(update, idx, i+1); // Move the element to after the current element
-                i--; // i drops one since idx element in front is removed
-            }
+function markVisited(mapArrArr, pos) {
+    if(mapArrArr[pos.y][pos.x] === '.' || mapArrArr[pos.y][pos.x] === '^') {
+        visitedPositions++;
+        if(mapArrArr[pos.y][pos.x] != '^') {
+            mapArrArr[pos.y][pos.x] = 'X';
         }
     }
-    return update;
 }
 
-function swapElement(arr, from, to) {
-    const temp = arr[from];
-    arr[from] = arr[to];
-    arr[to] = temp;
-}
-
-function moveElement(arr, from, to) {
-    const removedElement = arr.splice(from, 1)[0];
-    arr.splice(to, 0, removedElement);
-}
-
-function moveElementToEnd(arr, from) {
-    const removedElement = arr.splice(from, 1)[0];
-    arr.push(removedElement);
-}
-
-
-function isCorrectlyOrderedUpdate(update, rules) {
-    for(let i = 0; i < update.length - 1; i++) {
-        const rulesArr = rules[update[i]];
-        //Check that all rule elements are after the current element in the array
-        const isCorrect = rulesArr.every( (element) => {
-            let idx = update.findIndex((val) => val === element);
-            return (idx === -1 || idx >= i); // Rule element is not found or after current element
-        });
-
-        if(!isCorrect ) {
-            return false;
-        }
+function getNewPos(mapArrArr, pos, direction) {
+    let newPos = {...pos};
+    switch (direction) {
+        case 'N':
+            newPos.y -= 1;
+            break;
+        case 'E':
+            newPos.x += 1;
+            break;
+        case 'S':
+            newPos.y += 1;
+            break;
+        case 'W':
+            newPos.x -= 1;
+            break;
     }
-    return true;
+
+    if(!isOutsideMap(mapArrArr, newPos))
+        return newPos;
+    else
+        return null;
 }
 
-function getMiddle(page) {
-    if(page.length === 0) return 0;
-    const middleIndex = Math.floor(page.length / 2);
-    return page[middleIndex];
+function isOutsideMap(mapArrArr, pos) {
+    const isOutsideMap = pos.y < 0 || pos.x < 0 || pos.y >= mapArrArr.length || pos.x >= mapArrArr[pos.y].length;
+    return isOutsideMap;
 }
 
+
+function isObstacle(mapArrArr, pos) {
+    const isObstacle = mapArrArr[pos.y][pos.x] === '#' || mapArrArr[pos.y][pos.x] === 'O';
+
+    return isObstacle;
+}
+
+function isLoopDetected(pos, direction) {
+    let loopDetected = false;
+
+    if(loopDetectionStatus.active) {
+        if(loopDetectionStatus.turns.length > 0)
+            loopDetected = loopDetectionStatus.turns.some(turn => detectLoop(turn, pos, direction));
+        loopDetectionStatus.turns.push({pos: {...pos}, direction: currentDirection});
+    }
+
+    return loopDetected;
+}
+
+function detectLoop(turn, pos, direction) {
+    const samePos = turn.pos.x == pos.x && turn.pos.y == pos.y;
+    const sameDirection = turn.direction == direction;
+    const loopDetected = samePos && sameDirection;
+
+    return loopDetected;
+}
