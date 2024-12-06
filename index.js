@@ -11,6 +11,8 @@ let loopDetectionStatus = {
     turns : []
 };
 
+let test = 0;
+
 parseDay6Data();
 
 function parseDay6Data() {
@@ -22,8 +24,8 @@ function parseDay6Data() {
     fs.writeFileSync(fd, mapArrArr.map((line) => line.join('')).join('\r\n'));
     console.log("visitedPositions", visitedPositions); // Correct answer: 5444
 
-    const loopCnt = runLoopDetection(startPos, startDirection);
-    console.log("loopCnt", loopCnt); // Correct answer: 1722 is too low, 4680 is too high, 2064 is not correct
+    const createdLoops = runLoopDetection(startPos, startDirection);
+    console.log("createdLoops", createdLoops); // Correct answer: 1946
 }
 
 function readMapFile(fileName) {
@@ -34,21 +36,19 @@ function readMapFile(fileName) {
 
 function runLoopDetection(startPos, startDirection) {
     let detectedLoops = 0;
-    for (let y = 0; y < mapArrArr.length; y++) {
-        for (let x = 0; x < mapArrArr[y].length; x++) {
-            const mapArrArr = readMapFile('./data/mapfile.txt');
-            mapArrArr[startPos.y][startPos.x] = '^';
-            if (mapArrArr[y][x] == 'X') {
+    const mapFileArrArr = readMapFile('./data/mapfile.txt');
+    for (let y = 0; y < mapFileArrArr.length; y++) {
+        for (let x = 0; x < mapFileArrArr[y].length; x++) {
+            if (mapFileArrArr[y][x] == 'X') {
+                const mapArrArr = readMapFile('./data/list6.txt');
                 mapArrArr[y][x] = 'O';
                 delete loopDetectionStatus.turns;
                 loopDetectionStatus = {
                     active : true,
                     turns : []
                 };
-                console.log(`mapArrArr[${y}][${x}] = O`);
                 if(patrol(mapArrArr, startPos, startDirection)){
                     detectedLoops++;
-                    console.log("detectedLoops", detectedLoops);
                 }
             }
         }
@@ -80,6 +80,7 @@ function patrol(mapArrArr, startPos, direction) {
 
         // Change direction if there is an obstacle
         do {
+
             // Get the new position (or null if outside map)
             newPos = getNewPos(mapArrArr, pos, direction);
 
@@ -158,7 +159,7 @@ function isLoopDetected(pos, direction) {
     if(loopDetectionStatus.active) {
         if(loopDetectionStatus.turns.length > 0)
             loopDetected = loopDetectionStatus.turns.some(turn => detectLoop(turn, pos, direction));
-        loopDetectionStatus.turns.push({pos: {...pos}, direction: currentDirection});
+        loopDetectionStatus.turns.push({pos: {...pos}, direction: direction});
     }
 
     return loopDetected;
