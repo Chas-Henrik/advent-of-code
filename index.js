@@ -1,116 +1,123 @@
 
 // Include fs module
 const fs = require('fs');
-const CALC_RESONANT_ANTI_NODES = true;
-let mapHeight = 0;
-let mapWidth = 0; 
+const DEFRAG_FILES = true;
 
-parseDay8Data();
+parseDay9Data();
 
 function readFileData(fileName) {
     const data = fs.readFileSync(fileName, 'utf8');
-    const linesArr = data.split('\r\n');
-    return linesArr;
+    const diskMap = data.split('');
+    return diskMap;
 }
 
-function parseDay8Data() {
-    const dataArr = readFileData('./data/list8.txt')
-    const dataArrArr = dataArr.map((item) => item.split(""));
-    mapHeight = dataArrArr.length;
-    mapWidth = dataArrArr[0].length;   
-    const antennas = compileAntennas(dataArrArr);
-    const antiNodes = calcAntiNodeLocations(antennas);
-    const uniqueLocations = removeDuplicates(antiNodes);
-    // console.log(antiNodes);
-    // console.log(uniqueLocations);
-    console.log("Anti Nodes", antiNodes.length);
-    console.log("Unique Locations", uniqueLocations.length); // Correct Answer: a) 299 , b) 1032
+function parseDay9Data() {
+    const diskMap = readFileData('./data/list9.txt')
+    const fileMap = createFreeSpaceMap(diskMap);
+
+    const deFragmentedFileMap = defragFile(fileMap);
+    const checksum = calcChecksum(deFragmentedFileMap);
+    console.log("checksum", checksum); // Correct answer: 6200294120911
 }
 
-function isOnMap({y, x}) {
-    return y >= 0 && x >= 0 && y < mapHeight && x < mapWidth;
+function defragFile(fileMap) {
+    if(DEFRAG_FILES){
+        return deFragmentFileMap2(fileMap);
+    } else {
+        return deFragmentFileMap(fileMap);
+    }
 }
 
-function isSamePos(pos1, pos2) {
-    return pos1.y===pos2.y && pos1.x===pos2.x;
+function calcChecksum(deFragmentedFileMap) {
+    let checksum = 0;
+    for(let i=0; i<deFragmentedFileMap.length; i++) {
+        if(deFragmentedFileMap[i] != '.') {
+            checksum +=  i*deFragmentedFileMap[i];
+        }
+    }
+    return checksum;
 }
 
-function subtractPositions(pos1, pos2) {
-    return {y: pos1.y-pos2.y, x: pos1.x-pos2.x};
-}
-
-function addPositions(pos1, pos2) {
-    return {y: pos1.y+pos2.y, x: pos1.x+pos2.x};
-}
-
-function removeDuplicates(antiNodes) {
-    const uniqueLocations = antiNodes.reduce((acc, pos) => {
-        if(!acc.some((item) => isSamePos(item, pos))) {
-            acc.push(pos);
-        };
-        return acc;
-    }, []);
-
-    return uniqueLocations;
-}
-
-function calcAntiNodeLocations(antennas) {
-    const antiNodes = [];
-    for(let antenna in antennas) {
-        const antennaCnt = antennas[antenna].pos.length;
-        for(let a1 = 0; a1<antennaCnt; a1++) {
-            for(let a2 = a1+1; a2<antennaCnt; a2++) {
-                if(CALC_RESONANT_ANTI_NODES) {
-                    addResonantAntiNodesLocations(antiNodes, antennas[antenna].pos[a1], antennas[antenna].pos[a2]);
-                } else {
-                    addAntiNodesLocations(antiNodes, antennas[antenna].pos[a1], antennas[antenna].pos[a2]);
-                }
+function findEmptySlot(defragMap, size) {
+    for(let i=0; i<defragMap.length-1; i++){
+        if(defragMap[i] === '.'){
+            const testSlice = defragMap.slice(i, i+size);
+            if(testSlice.every((block) => block === '.')) {
+                return i;
             }
         }
     }
-    return antiNodes;
+    return -1;
 }
 
-function addAntiNodesLocations(antiNodes, a1, a2) {
-    const nodeDist = subtractPositions(a2, a1);
-    const antiNode1 = subtractPositions(a1, nodeDist);
-    const antiNode2 = addPositions(a2, nodeDist);
-
-    if(isOnMap(antiNode1))
-        antiNodes.push(antiNode1);
-    if(isOnMap(antiNode2))
-        antiNodes.push(antiNode2);
-}
-
-function addResonantAntiNodesLocations(antiNodes, a1, a2) {
-    const nodeDist = subtractPositions(a2, a1);
-    let antiNode = a1;
-    while(isOnMap(antiNode)) {
-        antiNodes.push(antiNode);
-        antiNode = subtractPositions(antiNode, nodeDist);
-    }
-
-    antiNode = a2;
-    while(isOnMap(antiNode)) {
-        antiNodes.push(antiNode);
-        antiNode = addPositions(antiNode, nodeDist);
+function moveFile(defragMap, from, to, fileSize) {
+    const file = defragMap.slice(from, from + fileSize);
+    defragMap.splice(to, file.length, ...file);
+    for(let i=0; i<fileSize; i++) {
+        defragMap[from+i] = '.'; 
     }
 }
 
-function compileAntennas(dataArrArr) {
-    const antennas = {};
-    for(let y=0; y<dataArrArr.length; y++) {
-        for(let x=0; x<dataArrArr[y].length; x++) {
-            const aType = dataArrArr[y][x];
-            const aPos = {y:y, x:x};
-            if(aType !== '.') {
-                if(typeof antennas[aType] === 'undefined') {
-                    antennas[aType] = {pos: [aPos]};
-                } else {
-                    antennas[aType].pos.push(aPos);
-                }
+function deFragmentFileMap2(fileMap) {
+    const defragMap = [...fileMap];
+
+    let j = defragMap.length-1;
+    do {
+        // Goto next full pos (in reversed order)
+        while(j>0 && defragMap[j] == '.') j--;
+
+        // Get file size
+        let fileSize = 0
+        const fileId = defragMap[j];
+        while(defragMap[j] === fileId) {
+            j--;
+            fileSize++;
+        }
+        const fromIdx = j+1;
+        
+        // Find empty slot with size >= fileSize
+        const eIndex = findEmptySlot(defragMap, fileSize)
+        if(eIndex >= 0 && eIndex < fromIdx) {
+            moveFile(defragMap, fromIdx, eIndex, fileSize);
+        }
+
+    } while(j>0);
+
+    return defragMap;
+}
+
+function deFragmentFileMap(fileMap) {
+    const defragMap = [...fileMap];
+    let i = 0;
+    let j = defragMap.length-1;
+    do {
+        // Goto next empty pos
+        while(i<defragMap.length && defragMap[i] != '.') i++;
+        if(i>=defragMap.length)
+            break;
+
+        // Goto next full pos (in reversed order)
+        while(j>i && defragMap[j] == '.') j--;
+
+        defragMap[i] = defragMap[j];
+        defragMap[j] = '.';
+    } while(j>i);
+
+    return defragMap;
+}
+
+function createFreeSpaceMap(diskMap) {
+    const fileBlocks = [];
+    let id = 0;
+    for(let i=0; i<diskMap.length; i+=2, id++) {
+        for(let j=0; j<diskMap[i]; j++) {
+            fileBlocks.push(id);
+        }
+        if(i+1 < diskMap.length) {
+            for(let j=0; j<diskMap[i+1]; j++) {
+                fileBlocks.push('.');
             }
         }
     }
-    return antennas;
+    return fileBlocks;
 }
