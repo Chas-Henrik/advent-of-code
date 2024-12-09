@@ -17,7 +17,7 @@ function parseDay9Data() {
 
     const deFragmentedFileMap = defragFile(fileMap);
     const checksum = calcChecksum(deFragmentedFileMap);
-    console.log("checksum", checksum); // Correct answer: 6200294120911
+    console.log("checksum", checksum); // Correct answer: a) 6200294120911, b) 6227018762750
 }
 
 function defragFile(fileMap) {
