@@ -56,10 +56,10 @@ function calcCombinations(a, b, res) {
     const combinations = [];
     const maxA = Math.floor(res/a);
 
-    for(let i=0; i<=maxA; i++){
-        if((res - a*i) % b === 0) {
-            const tmp = (res - a*i)/b;
-            combinations.push({A: i, B: tmp, Price: BUTTON_A_PRICE*i + BUTTON_B_PRICE*tmp})
+    for(let aPress=0; aPress<=maxA; aPress++){
+        if((res - a*aPress) % b === 0) {
+            const bPress = (res - a*aPress)/b;
+            combinations.push({A: aPress, B: bPress, Price: BUTTON_A_PRICE*aPress + BUTTON_B_PRICE*bPress})
         }
     }
 
